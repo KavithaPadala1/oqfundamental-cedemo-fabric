@@ -1,0 +1,503 @@
+
+User : show all promo roles?
+SQL:
+-- main query to get the company promo roles 
+SELECT distinct CompanyITSRoleName
+FROM cedemo_CompanyITSRoleMaster
+WHERE IsPromoRole = 1 AND IsActive = 1
+ORDER BY CompanyITSRoleName ASC;
+-- count query to get the total company promo roles
+SELECT  Count(CompanyITSRoleName) as TotalcompanyPromorolescount FROM cedemo_CompanyITSRoleMaster
+WHERE IsPromoRole = 1 AND IsActive = 1;
+
+User : list all company roles
+SQL:
+-- all company promo roles
+ SELECT distinct CompanyITSRoleName as Promoroles
+FROM cedemo_CompanyITSRoleMaster
+WHERE IsActive = 1 and IsPromoRole = 1 
+ORDER BY CompanyITSRoleName ASC;
+-- all company Add-on roles
+ SELECT distinct CompanyITSRoleName as Addonroles
+FROM cedemo_CompanyITSRoleMaster
+WHERE IsActive = 1 and IsAddonRole = 1 
+ORDER BY CompanyITSRoleName ASC;
+-- count query
+SELECT
+    COUNT(CompanyITSRoleName) AS TotalRoles,
+    SUM(CASE WHEN IsPromoRole = 1 THEN 1 ELSE 0 END) AS TotalPromoRoles,
+    SUM(CASE WHEN IsAddonRole = 1 THEN 1 ELSE 0 END) AS TotalAddonRoles
+FROM cedemo_CompanyITSRoleMaster
+WHERE IsActive = 1;
+
+User : list all contractor roles
+SQL:
+ -- main query to get all active contractor roles
+select distinct DescriptionName as ContractorRoles from vm_cedemo_oqrequirements  where TypeName = 'Contractor ITS Role'
+-- count query to get total active contractor roles
+SELECT COUNT(DescriptionName) AS TotalContractorRoles
+from vm_cedemo_oqrequirements  where TypeName = 'Contractor ITS Role'
+
+User : show me breakdown of tasks count for contractor roles
+SQL:
+--  query to get the break down of tasks for Contractor role
+SELECT 
+    DescriptionName as ContractorRole,
+    COUNT(DISTINCT TRIM(value)) AS TaskCount
+FROM vm_cedemo_oqrequirements
+CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+WHERE TypeName = 'Contractor ITS Role'
+GROUP BY DescriptionName
+ORDER BY TaskCount DESC;
+
+User : show me requirements for Contractor ITS Role API Gas Welder
+SQL:
+-- main query to get the tasks for API Gas Welder
+SELECT DescriptionName as ContractorRole,
+    TRIM(value) AS Task
+FROM vm_cedemo_oqrequirements
+CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+WHERE DescriptionName = 'API Gas Welder'
+AND TRIM(value) <> ''
+ORDER BY Task;
+-- tasks count query
+SELECT 
+    COUNT(*) AS TotalTaskCount
+FROM vm_cedemo_oqrequirements
+CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+WHERE DescriptionName = 'API Gas Welder'
+AND TRIM(value) <> '';
+
+User : compare req for job desc 16inch Electrofusion with Excavation and Backfill
+SQL:
+-- Comparison of tasks for 16inch Electrofusion vs Excavation and Backfill with ticks
+WITH TasksCTE AS (
+    SELECT DISTINCT
+        DescriptionName,
+        UPPER(LTRIM(RTRIM(value))) AS Task
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE DescriptionName IN ('16inch Electrofusion', 'Excavation and Backfill')
+      AND LTRIM(RTRIM(value)) <> ''
+),
+TaskPresence AS (
+    SELECT 
+        Task,
+        MAX(CASE WHEN DescriptionName = '16inch Electrofusion' THEN 1 ELSE 0 END) AS Electrofusion,
+        MAX(CASE WHEN DescriptionName = 'Excavation and Backfill' THEN 1 ELSE 0 END) AS Excavation
+    FROM TasksCTE
+    GROUP BY Task
+)
+-- Tick table
+SELECT 
+    Task,
+    CASE WHEN Electrofusion = 1 THEN '✓' ELSE '✗' END AS [In 16inch Electrofusion],
+    CASE WHEN Excavation = 1 THEN '✓' ELSE '✗' END AS [In Excavation and Backfill]
+FROM TaskPresence
+ORDER BY Task;
+-- Count summary of tasks for 16inch Electrofusion vs Excavation and Backfill
+WITH TasksCTE AS (
+    SELECT DISTINCT
+        DescriptionName,
+        UPPER(LTRIM(RTRIM(value))) AS Task
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE DescriptionName IN ('16inch Electrofusion', 'Excavation and Backfill')
+      AND LTRIM(RTRIM(value)) <> ''
+),
+TaskPresence AS (
+    SELECT 
+        Task,
+        MAX(CASE WHEN DescriptionName = '16inch Electrofusion' THEN 1 ELSE 0 END) AS Electrofusion,
+        MAX(CASE WHEN DescriptionName = 'Excavation and Backfill' THEN 1 ELSE 0 END) AS Excavation
+    FROM TasksCTE
+    GROUP BY Task
+)
+SELECT
+    SUM(Electrofusion) AS TotalTasks_16inchElectrofusion,
+    SUM(Excavation) AS TotalTasks_ExcavationAndBackfill,
+    SUM(CASE WHEN Electrofusion = 1 AND Excavation = 1 THEN 1 ELSE 0 END) AS CommonTasks,
+    SUM(CASE WHEN Electrofusion = 1 AND Excavation = 0 THEN 1 ELSE 0 END) AS TasksOnlyIn16inchElectrofusion,
+    SUM(CASE WHEN Electrofusion = 0 AND Excavation = 1 THEN 1 ELSE 0 END) AS TasksOnlyInExcavationAndBackfill
+FROM TaskPresence;
+
+User : compare these two roles Construction Services - Phase I - Hyb with Construction Services - Phase II - Hyb 
+SQL:
+-- Comparison of tasks for Construction Services Phase I vs Phase II with ticks
+WITH RoleTasks AS (
+    SELECT DISTINCT
+        DescriptionName AS RoleName,
+        UPPER(LTRIM(RTRIM(value))) AS Task  -- normalize spaces and case
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE DescriptionName IN ('Construction Services - Phase I - Hyb',
+                              'Construction Services - Phase II - Hyb')
+      AND LTRIM(RTRIM(value)) <> ''
+),
+TaskPresence AS (
+    SELECT 
+        Task,
+        MAX(CASE WHEN RoleName = 'Construction Services - Phase I - Hyb' THEN 1 ELSE 0 END) AS Phase1,
+        MAX(CASE WHEN RoleName = 'Construction Services - Phase II - Hyb' THEN 1 ELSE 0 END) AS Phase2
+    FROM RoleTasks
+    GROUP BY Task
+)
+-- Tick table
+SELECT 
+    Task,
+    CASE WHEN Phase1 = 1 THEN '✓' ELSE '✗' END AS [In Construction Services - Phase I - Hyb],
+    CASE WHEN Phase2 = 1 THEN '✓' ELSE '✗' END AS [In Construction Services - Phase II - Hyb]
+FROM TaskPresence
+ORDER BY Task;
+-- Count summary of tasks for Construction Services Phase I vs Phase II
+WITH RoleTasks AS (
+    SELECT DISTINCT
+        DescriptionName AS RoleName,
+        UPPER(LTRIM(RTRIM(value))) AS Task
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE DescriptionName IN ('Construction Services - Phase I - Hyb',
+                              'Construction Services - Phase II - Hyb')
+      AND LTRIM(RTRIM(value)) <> ''
+),
+TaskPresence AS (
+    SELECT 
+        Task,
+        MAX(CASE WHEN RoleName = 'Construction Services - Phase I - Hyb' THEN 1 ELSE 0 END) AS Phase1,
+        MAX(CASE WHEN RoleName = 'Construction Services - Phase II - Hyb' THEN 1 ELSE 0 END) AS Phase2
+    FROM RoleTasks
+    GROUP BY Task
+)
+SELECT
+    SUM(Phase1) AS [Total Tasks in Construction Services - Phase I - Hyb],
+    SUM(Phase2) AS [Total Tasks in Construction Services - Phase II - Hyb],
+    SUM(CASE WHEN Phase1 = 1 AND Phase2 = 1 THEN 1 ELSE 0 END) AS [Total Common Tasks],
+    SUM(CASE WHEN Phase1 = 1 AND Phase2 = 0 THEN 1 ELSE 0 END) AS [Tasks only in Phase I],
+    SUM(CASE WHEN Phase1 = 0 AND Phase2 = 1 THEN 1 ELSE 0 END) AS [Tasks only in Phase II]
+FROM TaskPresence;
+
+User : show me qualified employees for job desc 16inch Electrofusion
+SQL:
+WITH RequiredWAF AS (
+    -- value is string from STRING_SPLIT, so we trim then cast
+    SELECT DISTINCT TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE DescriptionName = '16inch Electrofusion'
+),
+EmployeeQualified AS (
+    SELECT 
+        q.EmployeeMasterID,
+        COUNT(DISTINCT q.WorkActivityFunctionID) AS QualifiedCount  -- q.WorkActivityFunctionID is already BIGINT
+    FROM vm_cedemo_CompanyEmployeesWAFQualifications q
+    INNER JOIN RequiredWAF r
+        ON q.WorkActivityFunctionID = r.WorkActivityFunctionID  -- NO TRIM here
+    WHERE UPPER(TRIM(q.Qualified)) = 'YES'  -- only trim string
+    GROUP BY q.EmployeeMasterID
+),
+RequiredCount AS (
+    SELECT COUNT(*) AS TotalRequired
+    FROM RequiredWAF
+)
+SELECT
+    ce.EmployeeName,
+    ce.ITSID,
+    ce.ITSRoleNames
+FROM EmployeeQualified eq
+JOIN RequiredCount rc
+    ON eq.QualifiedCount = rc.TotalRequired
+JOIN vm_cedemo_companyemployees_active ce
+    ON ce.EmployeeMasterID = eq.EmployeeMasterID
+ORDER BY ce.EmployeeName;
+-- count query
+WITH RequiredWAF AS (
+    -- value is string from STRING_SPLIT, so we trim then cast
+    SELECT DISTINCT TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE DescriptionName = '16inch Electrofusion'
+),
+EmployeeQualified AS (
+    SELECT 
+        q.EmployeeMasterID,
+        COUNT(DISTINCT q.WorkActivityFunctionID) AS QualifiedCount  -- q.WorkActivityFunctionID is BIGINT
+    FROM vm_cedemo_CompanyEmployeesWAFQualifications q
+    INNER JOIN RequiredWAF r
+        ON q.WorkActivityFunctionID = r.WorkActivityFunctionID  -- no TRIM here
+    WHERE UPPER(TRIM(q.Qualified)) = 'YES'
+    GROUP BY q.EmployeeMasterID
+),
+RequiredCount AS (
+    SELECT COUNT(*) AS TotalRequired
+    FROM RequiredWAF
+)
+SELECT COUNT(*) AS TotalQualifiedCompanyEmployees
+FROM EmployeeQualified eq
+JOIN RequiredCount rc
+    ON eq.QualifiedCount = rc.TotalRequired;
+
+User : get me requirements for Field Activity 16inch Electrofusion
+SQL:
+ -- main query to get the requirements for Field Activity 16inch Electrofusion
+SELECT distinct
+       TRIM(value) AS Task
+FROM vm_cedemo_oqrequirements
+CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+WHERE DescriptionName = '16inch Electrofusion'
+  AND TRIM(value) <> ''
+ORDER BY Task;
+-- count query
+SELECT COUNT(DISTINCT TRIM(value)) AS TotalTaskCount
+FROM vm_cedemo_oqrequirements
+CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+WHERE DescriptionName = '16inch Electrofusion'
+  AND TRIM(value) <> '';
+
+User : show all job functions?
+SQL:
+-- main query to get all job functions
+SELECT DISTINCT DescriptionName AS JobFunction
+FROM vm_cedemo_oqrequirements
+WHERE TypeName = 'Field Activity'
+ORDER BY JobFunction ASC;
+-- count query to get the total job functions
+SELECT COUNT(DescriptionName) AS TotalJobFunctions
+FROM vm_cedemo_oqrequirements
+WHERE TypeName = 'Field Activity';
+
+User : are there any common req between Poor Pressure Investigation (Poor Pressure) and regulator automation?
+SQL:
+-- Comparison of tasks for Poor Pressure Investigation vs Regulator Automation
+WITH TasksCTE AS (
+    SELECT DISTINCT
+        DescriptionName,
+        LOWER(LTRIM(RTRIM(value))) AS Task
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE DescriptionName IN ('Poor Pressure Investigation (Poor Pressure)', 'Regulator Automation')
+      AND LTRIM(RTRIM(value)) <> ''
+),
+TaskPresence AS (
+    SELECT 
+        Task,
+        MAX(CASE WHEN DescriptionName = 'Poor Pressure Investigation (Poor Pressure)' THEN 1 ELSE 0 END) AS PoorPressure,
+        MAX(CASE WHEN DescriptionName = 'Regulator Automation' THEN 1 ELSE 0 END) AS RegulatorAutomation
+    FROM TasksCTE
+    GROUP BY Task
+)
+SELECT 
+    Task,
+    CASE WHEN PoorPressure = 1 THEN '✓' ELSE '✗' END AS [In Poor Pressure Investigation],
+    CASE WHEN RegulatorAutomation = 1 THEN '✓' ELSE '✗' END AS [In Regulator Automation]
+FROM TaskPresence
+ORDER BY Task;
+-- Count summary for Poor Pressure Investigation vs Regulator Automation
+WITH TasksCTE AS (
+    SELECT DISTINCT
+        DescriptionName,
+        LOWER(LTRIM(RTRIM(value))) AS Task
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE DescriptionName IN ('Poor Pressure Investigation (Poor Pressure)', 'Regulator Automation')
+      AND LTRIM(RTRIM(value)) <> ''
+),
+TaskPresence AS (
+    SELECT 
+        Task,
+        MAX(CASE WHEN DescriptionName = 'Poor Pressure Investigation (Poor Pressure)' THEN 1 ELSE 0 END) AS PoorPressure,
+        MAX(CASE WHEN DescriptionName = 'Regulator Automation' THEN 1 ELSE 0 END) AS RegulatorAutomation
+    FROM TasksCTE
+    GROUP BY Task
+)
+SELECT
+    SUM(PoorPressure) AS TotalTasks_PoorPressureInvestigation,
+    SUM(RegulatorAutomation) AS TotalTasks_RegulatorAutomation,
+    SUM(CASE WHEN PoorPressure = 1 AND RegulatorAutomation = 1 THEN 1 ELSE 0 END) AS CommonTasks,
+    SUM(CASE WHEN PoorPressure = 1 AND RegulatorAutomation = 0 THEN 1 ELSE 0 END) AS TasksOnlyInPoorPressure,
+    SUM(CASE WHEN PoorPressure = 0 AND RegulatorAutomation = 1 THEN 1 ELSE 0 END) AS TasksOnlyInRegulatorAutomation
+FROM TaskPresence;
+    
+User : Show me the qualified persons in CAC for ContractorITSRole Con Edison Contractor - CM Live Gas - Hyb
+SQL:
+WITH RequiredWAF AS (
+    SELECT DISTINCT TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE DescriptionName = 'Con Edison Contractor - CM Live Gas - Hyb'
+),
+EmployeeQualified AS (
+    SELECT
+        q.EmployeeMasterID,
+        COUNT(DISTINCT q.WorkActivityFunctionID) AS QualifiedCount
+    FROM vm_cedemo_ContractorEmployeesWAFQualifications q
+    INNER JOIN RequiredWAF r
+        ON q.WorkActivityFunctionID = r.WorkActivityFunctionID   -- no TRIM here because it is BIGINT
+    WHERE UPPER(TRIM(q.Qualified)) = 'YES'
+    GROUP BY q.EmployeeMasterID
+),
+RequiredCount AS (
+    SELECT COUNT(*) AS TotalRequired
+    FROM RequiredWAF
+)
+SELECT
+    ce.EmployeeName,
+    ce.ITSID,
+    ce.ContractorName,
+    ce.ITSRoleNames
+FROM EmployeeQualified eq
+JOIN RequiredCount rc
+    ON eq.QualifiedCount = rc.TotalRequired
+JOIN vm_cedemo_contractoremployees_active ce
+    ON ce.EmployeeMasterID = eq.EmployeeMasterID
+WHERE ce.ContractorDisplayName = 'CAC' or ce.ContractorName = 'CAC Industries Inc.'
+ORDER BY ce.EmployeeName;
+-- count query
+WITH RequiredWAF AS (
+    SELECT DISTINCT TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE DescriptionName = 'Con Edison Contractor - CM Live Gas - Hyb'
+),
+EmployeeQualified AS (
+    SELECT
+        q.EmployeeMasterID,
+        COUNT(DISTINCT q.WorkActivityFunctionID) AS QualifiedCount
+    FROM vm_cedemo_ContractorEmployeesWAFQualifications q
+    INNER JOIN RequiredWAF r
+        ON q.WorkActivityFunctionID = r.WorkActivityFunctionID  -- BIGINT, no TRIM
+    WHERE UPPER(TRIM(q.Qualified)) = 'YES'
+    GROUP BY q.EmployeeMasterID
+),
+RequiredCount AS (
+    SELECT COUNT(*) AS TotalRequired
+    FROM RequiredWAF
+)
+SELECT COUNT(*) AS TotalQualifiedContractorEmployees
+FROM EmployeeQualified eq
+JOIN RequiredCount rc
+    ON eq.QualifiedCount = rc.TotalRequired
+JOIN vm_cedemo_contractoremployees_active ce
+    ON ce.EmployeeMasterID = eq.EmployeeMasterID
+WHERE ce.ContractorDisplayName = 'CAC'
+   OR ce.ContractorName = 'CAC Industries Inc.';
+
+User : count employee number by dept number by section name by title for dept code 539 and 538
+SQL:
+SELECT DeptCode,
+       SectionName,
+       EmployeeTitle,
+       COUNT(EmployeeNumber) AS EmployeeCount
+FROM vm_cedemo_companyemployees_active
+WHERE DeptCode IN ('539', '538')
+GROUP BY DeptCode, SectionName, EmployeeTitle
+ORDER BY DeptCode, EmployeeCount DESC;
+
+User : show me employee operator qualifications 
+User: show me employee OQ status
+SQL:
+WITH EmployeeRoles AS (
+    SELECT
+        ce.EmployeeMasterID,
+        ce.EmployeeName,
+        ce.EmployeeNumber,
+        TRIM(value) AS RoleName
+    FROM vm_cedemo_companyemployees_active ce
+    CROSS APPLY STRING_SPLIT(ce.ITSRoleNames, ';')
+    WHERE ce.IsActive = 1
+),
+RequiredWAF AS (
+    SELECT
+        er.EmployeeMasterID,
+        er.EmployeeName,
+        er.EmployeeNumber,
+        er.RoleName,
+        TRY_CAST(TRIM(waf.value) AS BIGINT) AS WorkActivityFunctionID
+    FROM EmployeeRoles er
+    LEFT JOIN vm_cedemo_oqrequirements oq
+        ON oq.TypeName = 'Company ITS Role'
+        AND oq.DescriptionName = er.RoleName
+    CROSS APPLY STRING_SPLIT(ISNULL(oq.WorkActivityFunctionIDs, ''), ';') waf
+),
+RequiredCount AS (
+    SELECT
+        EmployeeMasterID,
+        EmployeeNumber,
+        EmployeeName,
+        RoleName,
+        COUNT(DISTINCT WorkActivityFunctionID) AS TotalRequiredWAF
+    FROM RequiredWAF
+    WHERE WorkActivityFunctionID IS NOT NULL
+    GROUP BY EmployeeMasterID, EmployeeNumber, EmployeeName, RoleName
+),
+QualifiedWAF AS (
+    SELECT
+        rw.EmployeeMasterID,
+        rw.EmployeeNumber,
+        rw.RoleName,
+        COUNT(DISTINCT q.WorkActivityFunctionID) AS QualifiedCount
+    FROM RequiredWAF rw
+    INNER JOIN vm_cedemo_CompanyEmployeesWAFQualifications q
+        ON rw.WorkActivityFunctionID = q.WorkActivityFunctionID
+        AND rw.EmployeeMasterID = q.EmployeeMasterID
+    WHERE UPPER(TRIM(q.Qualified)) = 'YES'
+    GROUP BY rw.EmployeeMasterID, rw.EmployeeNumber, rw.RoleName
+),
+RoleQualification AS (
+    SELECT
+        rc.EmployeeMasterID,
+        rc.EmployeeNumber,
+        rc.EmployeeName,
+        rc.RoleName,
+        CASE 
+            WHEN rc.TotalRequiredWAF IS NULL OR rc.TotalRequiredWAF = 0 THEN 'YES'
+            WHEN qc.QualifiedCount = rc.TotalRequiredWAF THEN 'YES'
+            ELSE 'NO'
+        END AS Qualified
+    FROM RequiredCount rc
+    LEFT JOIN QualifiedWAF qc
+        ON rc.EmployeeMasterID = qc.EmployeeMasterID
+        AND rc.RoleName = qc.RoleName
+),
+EmployeeSummary AS (
+    SELECT
+        ce.EmployeeMasterID,
+        ce.EmployeeNumber,
+        ce.EmployeeName,
+        -- Total roles assigned
+        COUNT(DISTINCT rq.RoleName) AS TotalRoles,
+        SUM(CASE WHEN rq.Qualified = 'YES' THEN 1 ELSE 0 END) AS QualifiedRoles,
+        SUM(CASE WHEN rq.Qualified = 'NO' THEN 1 ELSE 0 END) AS NotQualifiedRoles,
+        -- Direct check if employee has ITSRoleNames
+        CASE 
+            WHEN ce.ITSRoleNames IS NULL OR LTRIM(RTRIM(ce.ITSRoleNames)) = '' THEN 'NO'
+            ELSE 'YES'
+        END AS HasRoles
+    FROM vm_cedemo_companyemployees_active ce
+    LEFT JOIN RoleQualification rq
+        ON ce.EmployeeMasterID = rq.EmployeeMasterID
+    WHERE ce.IsActive = 1
+    GROUP BY ce.EmployeeMasterID, ce.EmployeeNumber, ce.EmployeeName, ce.ITSRoleNames
+)
+SELECT
+    COUNT(*) AS TotalEmployees,
+    SUM(CASE WHEN HasRoles = 'NO' THEN 1 ELSE 0 END) AS EmployeesWithoutRoles,
+    SUM(CASE WHEN HasRoles = 'YES' THEN 1 ELSE 0 END) AS EmployeesWithRoles,
+    SUM(CASE WHEN NotQualifiedRoles = 0 AND HasRoles = 'YES' THEN 1 ELSE 0 END) AS FullyQualifiedEmployees,
+    SUM(CASE WHEN NotQualifiedRoles > 0 AND HasRoles = 'YES' THEN 1 ELSE 0 END) AS EmployeesWithMissingQualifications
+FROM EmployeeSummary;
+
+User : give me employees count with roles and without roles
+SQL:
+SELECT
+    CASE WHEN TRIM(ISNULL(ITSRoleNames, '')) = '' THEN 'Without Roles' ELSE 'With Roles' END AS Rolebreakdown,
+    COUNT(EmployeeName) AS CompanyEmployeeCount
+FROM vm_cedemo_companyemployees_active
+WHERE IsActive = 1
+GROUP BY CASE WHEN TRIM(ISNULL(ITSRoleNames, '')) = '' THEN 'Without Roles' ELSE 'With Roles' END
+UNION ALL
+SELECT
+    'Total Company Employees' AS Rolebreakdown,
+    COUNT(EmployeeName) AS CompanyEmployeeCount
+FROM vm_cedemo_companyemployees_active
+WHERE IsActive = 1
+ORDER BY CompanyEmployeeCount DESC;

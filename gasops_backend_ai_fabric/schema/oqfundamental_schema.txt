@@ -1,0 +1,134 @@
+OQFundamental Schema
+
+TABLE : vm_cedemo_oqrequirements
+Description: use this to get the requirements (TaskCodes and TaskDescriptions) for any roles, field activity ,work activity function etc .
+Columns:
+- TypeName (varchar) : The type category to get requirements (e.g.,Contractor ITS Role, Company ITS Role, Field Activity, Work Activity Function).
+- DescriptionName (varchar) : Description name for the TypeName .
+- WorkActivityFunctionIDs (varchar) : Work Activity Function IDs associated with this requirement.Use this to get the qualifications.This can have comma separated values.
+- TaskCodesAndDescriptions (varchar) : these are the taskcodes and descriptions. It includes values TaskCode:TaskDescription; like this Con Ed CE23/24-Hyb : CE23/24- Con Edison Inspecting the Condition of Exposed Pipe - Hyb;Con Ed CE300 : CE300-Con Edison Gas API Welder (Qualification);Con Ed CE301 : CE301-Con Edison Gas API Welder (Requalification);
+
+TABLE : cedemo_CompanyITSRoleMaster
+Description: this stores all company roles along with the role types like promo or addon role.
+Columns:
+- CompanyITSRoleID (bigint) : Unique identifier for the specific IT or Field Service role.
+- CompanyITSRoleName (varchar) : The formal name of the role (e.g., "Corrosion Control - Supervisor", "Gas Construction - Supervisor").
+- IsActive (bit) : Indicates if the role is currently active within the organization.
+- IsPromoRole (bit) : Indicates if role is Promo or not. Has 0 and 1. Apply IsPromoRole=1 to get all the available Promo roles in company.
+- IsAddonRole (bit) : Indicates if the role is an "Add-on" or not. It has 0 and 1. Apply IsAddonRole =1 to get all the available addon roles in company
+
+
+TABLE: vm_cedemo_CompanyEmployeesWAFQualifications
+Description: this stores company employees qualifications along with the MissingCoveredTasks for each WorkActivityFunctionID.
+Columns:
+EmployeeMasterID (bigint): Unique Master ID of the company employee.
+WorkActivityFunctionID (bigint): Identifier for the specific Work Activity Function.
+Qualified (varchar): Indicates the qualification status for company employee. Has 'Yes' or 'No'.
+MissingCoveredTasks (varchar): specfies the missing covered tasks . It can have ; separated values like Con Ed CE44/54-Hyb;Con Ed CE300;NGA-CT-44/54-CAOC;Con Ed CE301;Con Ed CE302;NGA-CT-44/54
+
+
+TABLE: vm_cedemo_ContractorEmployeesWAFQualifications
+Description: Stores Work Activity Function (WAF) qualification details specifically for contractor employees, tracking their eligibility status and identifying any missing requirements.
+Columns:
+EmployeeMasterID (bigint): Unique Master ID of the contractor employee.
+WorkActivityFunctionID (bigint): Identifier for the specific Work Activity Function.
+Qualified (varchar): Indicates the qualification status for contractor employee. Has 'Yes' or 'No'.
+MissingCoveredTasks (varchar): specfies the missing covered tasks . It can have ; separated values like Con Ed CE401;NGA-CT-22B;22
+
+
+TABLE : vm_cedemo_companyemployeestaskqualifications
+Description: Stores task qualification details for company employees. Use this table to know the status of specific task
+Columns:
+- EmployeeMasterID (bigint) : Unique Master ID of the company employee.
+- CoveredTaskID (bigint) : Identifier for the covered task.
+- TaskCode (varchar) : Task code
+- TaskDescription (varchar) : Task description
+- QualificationStatus (varchar) : Qualification status. It can have Expired ,Suspended, Not Qualified,Qualified.
+- TaskExpirationDate (datetime) : Date when the task qualification expires.
+- SuspendedDate (datetime) : Date when the qualification was suspended, if applicable.
+- SuspendedReason (varchar) : Reason for the suspension.
+
+
+TABLE : vm_cedemo_contractoremployeestaskqualifications
+Description: Stores task qualification details for contractor employees.Use this table to know the status of specific task
+Columns:
+- EmployeeMasterID (bigint) : Unique Master ID of the contractor employee.
+- CoveredTaskID (bigint) : Identifier for the covered task.
+- TaskCode (varchar) : Task code
+- TaskDescription (varchar) : Task description
+- QualificationStatus (varchar) : Qualification status. It can have Expired ,Suspended, Not Qualified,Qualified.
+- TaskExpirationDate (datetime) : Date when the task qualification expires.
+- SuspendedDate (datetime) : Date when the qualification was suspended, if applicable.
+- SuspendedReason (varchar) : Reason for suspension.
+
+
+TABLE : vm_cedemo_contractoremployeescertifications
+Description: Stores certification details for contractor employees.
+Columns:
+- EmployeeMasterID (bigint) : Unique Master ID of the employee associated with the certificate.
+- CertificateName (varchar) : Name or title of the certification.
+- CertificateNumber (varchar) : Unique number or identifier of the certificate.
+- CertificateExpiryDate (datetime) : Date when the certification expires.
+
+
+TABLE : vm_cedemo_companyemployees_active
+Description: Stores details of active company employees, including organizational hierarchy and contact info.
+Columns:
+- EmployeeMasterID (bigint) : Unique Master ID of the employee.
+- EmployeeNumber (varchar) : Unique employee number.
+- ITSID (varchar) : ITS identifier for the employee.
+- EmployeeName (varchar) : Full name of the employee.
+- CompanyOrgID (bigint) : Identifier for the company organization.
+- OrgCode (varchar) : Code representing the organization.
+- OrgName (varchar) : Name of the organization.
+- CompanyDepartmentID (bigint) : Identifier for the company department.
+- DepartmentName (varchar) : Name of the department.
+- CompanySectionID (bigint) : Identifier for the company section.
+- SectionName (varchar) : Name of the section.
+- EmployeeTitleID (bigint) : Identifier for the employee's title.
+- EmployeeTitle (varchar) : Job title of the employee.
+- RegionID (bigint) : Identifier for the region.
+- RegionName (varchar) : Name of the region.
+- DISAPool (varchar) : DISA pool information.
+- DeptCode (varchar) : Department code.
+- SectionCode (varchar) : Section code.
+- ITSRoleNames (varchar) : Names of ITS roles assigned to the company employee. It can have ; separated values like Gas Construction - Supervisor - Hyb;Gas Construction - Supervisor Academy - Hyb
+- SupervisorName (varchar) : Name of the employee's supervisor.
+- ManagerName (varchar) : Name of the employee's manager.
+- DeptCode (varchar) : Numerical or alphanumeric code for the department.
+- SectionCode (varchar) : Numerical or alphanumeric code for the section.
+
+
+TABLE : vm_cedemo_contractoremployees_active
+Description: Stores comprehensive details of active contractor employees, including contact info and roles.
+Columns:
+- VenderCode (varchar) : Unique vendor code associated with the contractor.
+- ContractorName (varchar) : Full legal name of the contractor company.
+- ContractorDisplayName (varchar) : Name used for display purposes for the contractor.Use like operator for ContractorName
+- EmployeeMasterID (bigint) : Unique Master ID of the contractor employee.
+- ITSID (varchar) : ITS identifier for the employee.
+- EmployeeName (varchar) : Full name of the employee.
+- RegionName (varchar) : Name of the region the employee is assigned to.
+- DISAPool (varchar) : DISA pool classification for the employee.
+- ITSRoleNames (varchar) : Comma-separated list or description of ITS roles assigned.
+
+
+TABLE : cedemo_CoveredTask
+Description: Stores definitions for OQ covered tasks, including versioning and exam requirements.
+Columns:
+- CoveredTaskID (bigint) : Unique identifier for the covered task.
+- TaskNum (varchar) : The number or code assigned to the task (e.g., Task Code).
+- TaskDesc (varchar) : Description of the task.
+- IsActive (bit) : Indicates if the task is currently active.
+
+
+RELATIONSHIPS:
+- vm_cedemo_oqrequirements.WorkActivityFunctionIDs = vm_cedemo_CompanyEmployeesWAFQualifications.WorkActivityFunctionID
+- vm_cedemo_oqrequirements.WorkActivityFunctionIDs = vm_cedemo_ContractorEmployeesWAFQualifications.WorkActivityFunctionID
+
+- vm_cedemo_companyemployees_active.EmployeeMasterID = vm_cedemo_CompanyEmployeesWAFQualifications.EmployeeMasterID
+- vm_cedemo_companyemployees_active.EmployeeMasterID = vm_cedemo_companyemployeestaskqualifications.EmployeeMasterID
+
+- vm_cedemo_contractoremployees_active.EmployeeMasterID = vm_cedemo_ContractorEmployeesWAFQualifications.EmployeeMasterID
+- vm_cedemo_contractoremployees_active.EmployeeMasterID = vm_cedemo_contractoremployeestaskqualifications.EmployeeMasterID
+- vm_cedemo_contractoremployees_active.EmployeeMasterID = vm_cedemo_contractoremployeescertifications.EmployeeMasterID
