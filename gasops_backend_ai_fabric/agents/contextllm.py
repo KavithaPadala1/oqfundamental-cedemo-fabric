@@ -47,7 +47,7 @@ Examples of STANDALONE questions:
   ✓ "Show me the requirements for dual qualified supervisor" (subject: dual qualified supervisor, intent: show requirements)
   ✓ "Give me WRs assigned to DeVoti" (subject: WRs, intent: assigned to DeVoti)
   ✓ "show me req for 16 inch electrofusion" (subject: 16 inch electrofusion, intent: show requirements)
-  ✓ "show me the weld numbers that were cut out" (subject: weld numbers, intent: cut out)
+  ✓ "hi" (subject: hi, intent: greeting)
 
 ═══════════════════════════════════
 DECISION — SHOULD YOU REWRITE?
@@ -100,9 +100,18 @@ EXAMPLES
   Return:  "show me req for 16 inch electrofusion"   ← NEVER add "16-inch" or any label
   
   Previous : "Pls show me the requirements for CM Live Gas"
-  Current: "how me the requirements for dual qualified supervisor"
-  Return:  "how me the requirements for dual qualified supervisor"   ← ignore previous context as current question is new question with clear subject and intent.
+  Current: "show me the requirements for dual qualified supervisor"
+  Return:  "show me the requirements for dual qualified supervisor"   ← ignore previous context as current question is new question with clear subject and intent.
+  
+  Assistant showed: "This list shows the breadth of roles within CAC Industries Inc., ranging from **Laborers** and **Backhoe Operators** to **API Gas Welders** and **Live Gas specialists**, with several employees holding multiple specialized add-on roles.Would you like to see the list of employees who have **add-on roles** within CAC Industries Inc.?"
+  Current : "Hi"
+  Return: "Hi"  WHY: Greeting is complete and standalone. Do NOT add "who have add-on roles within CAC
 
+# Rewrite - user clarifies
+  Previous: "show me contractor employees"
+  Assistant showed: "Please specify the contractor name to find contractor employees."
+  Current: "CAC" --> here user is clarifying the contractor name after assistant's prompt so we can rewrite the question to be complete and self-contained by adding the contractor name to the original question.
+  Return : "show me contractor employees for contractor CAC" --> add contractor keyword and name to make it complete.
   
 # Rewrite — user selects from a list (Rule A):
   Assistant showed: "1. James Hall  2. James Clark  3. James Burke"

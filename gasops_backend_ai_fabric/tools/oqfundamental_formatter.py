@@ -100,9 +100,8 @@ if the tasks when showing in bullets are more then show like this , show bullets
 
 -> *Always rename FieldActivityDescrition to job description in the response when showing to user as user is more familiar with term job description rather than field activity description.*
 
-
-"""
-        
+-> for any questions like "can you show me the 28 flagged employees for CAC Industries Inc " this is like a follow up question for user after assistant mentioned that there are 28 flagged employees for CAC Industries Inc. In such cases start the response appropriately like this "Here are the 28 CAC contractor employees who are currently not qualified for at least one of their assigned roles:...." instead of "There are 28.. "
+   """     
         # Call LLM to format the results
         response = azure_client.chat.completions.create(
             model=azureopenai,

@@ -80,6 +80,10 @@ async def name_clarifier_llm(query: str, auth_token=None):
     - "req for mains and services"
       → {{"names": ["mains and services"]}}
       (ONE activity phrase with "and")
+    
+    - "show me all bond employees region"
+        → {{"names": ["bond"]}}
+        (NOT "bond employees" - "employees" is generic, "bond" is the specific term that needs clarification)
      
     Return ONLY the JSON object, no explanation.
     """
@@ -300,10 +304,10 @@ CATEGORY_CONFIG = {
         "return_column": "ContractorITSRoleName",
         "type": "role"
     },
-    # ITS Roles - Company (cedemo_CompanyITSRoleMaster)
+    # ITS Roles - Company (cedemo_CompanyITSRoleMasterAlias)
     "CompanyITSRoleName": {
-        "table": "cedemo_CompanyITSRoleMaster",
-        "search_column": "CompanyITSRoleName",
+        "table": "cedemo_CompanyITSRoleMasterAlias",
+        "search_column": "AliasCompanyITSRoleName",
         "return_column": "CompanyITSRoleName",
         "type": "role"
     }
@@ -336,7 +340,7 @@ async def search_name_in_all_categories(name: str):
         results = execute_sql_query(sql_query)
         
         # Print the SQL query results
-        print(f"\n[Name Clarifier] ========== SQL RESULTS for '{name}' ==========")
+        # print(f"\n[Name Clarifier] ========== SQL RESULTS for '{name}' ==========")
         # print(f"[Name Clarifier] Total rows returned: {len(results) if results else 0}")
         # if results and len(results) > 0:
         #     for idx, row in enumerate(results, 1):
@@ -428,12 +432,12 @@ async def search_name_in_all_categories(name: str):
         all_matches.sort(key=lambda x: (-x["similarity"], x.get("match_length", 999)))
         
         # Print final processed matches
-        print(f"\n[Name Clarifier] ========== FINAL MATCHES for '{name}' ==========")
-        print(f"[Name Clarifier] Total unique matches after deduplication: {len(all_matches)}")
-        for idx, match in enumerate(all_matches, 1):
-            print(f"[Name Clarifier] Match {idx}: name='{match['name']}', category={match['category']}, "
-                  f"type={match['type']}, similarity={match['similarity']:.2f}, length={match['match_length']}")
-        print("[Name Clarifier] =============================================\n")
+        # print(f"\n[Name Clarifier] ========== FINAL MATCHES for '{name}' ==========")
+        # print(f"[Name Clarifier] Total unique matches after deduplication: {len(all_matches)}")
+        # for idx, match in enumerate(all_matches, 1):
+        # #     print(f"[Name Clarifier] Match {idx}: name='{match['name']}', category={match['category']}, "
+        #         #   f"type={match['type']}, similarity={match['similarity']:.2f}, length={match['match_length']}")
+        # # print("[Name Clarifier] =============================================\n")
         
         return all_matches
         
@@ -565,24 +569,20 @@ async def handle_all_single_matches(original_query: str, clarifications: list):
     
     for item in clarifications:
         match = item["matches"][0]
-        
-        # Get the return column name from config for alias categories
         category_key = match["category"]
         config = CATEGORY_CONFIG.get(category_key, {})
         return_column = config.get("return_column", category_key)
-        
-        clarified_value = f"{return_column} {match['name']}"
-        
+        # Use format_category_name for clarity
+        category_label = format_category_name(category_key)
+        clarified_value = f"{category_label} {match['name']}"
         # Check if we've already added this clarified value
         if clarified_value in seen_clarified:
-            # Append the original name to the existing entry
             seen_clarified[clarified_value]["original_names"].append(item["original_name"])
             print(f"[Name Clarifier] Skipping duplicate: '{item['original_name']}' → '{clarified_value}' (already added)")
         else:
-            # New unique clarification
             replacement = {
                 "original": item["original_name"],
-                "original_names": [item["original_name"]],  # Track all original names that map to this
+                "original_names": [item["original_name"]],
                 "clarified": clarified_value,
                 "type": match["type"],
                 "category": match["category"],

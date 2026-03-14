@@ -501,3 +501,191 @@ SELECT
 FROM vm_cedemo_companyemployees_active
 WHERE IsActive = 1
 ORDER BY CompanyEmployeeCount DESC;
+
+User : show me qualified contractor employees for contractor CAC
+SQL:
+-- Step 1: Get contractor employees with roles
+WITH ContractorEmployees AS (
+    SELECT DISTINCT
+        EmployeeMasterID,
+        EmployeeName,
+        TRIM(value) AS RoleName
+    FROM vm_cedemo_contractoremployees_active
+    CROSS APPLY STRING_SPLIT(ITSRoleNames, ';')
+    WHERE IsActive = 1
+      AND (ContractorName LIKE '%CAC%' OR ContractorDisplayName LIKE '%CAC%')
+      AND TRIM(ISNULL(ITSRoleNames,'')) <> ''
+      AND TRIM(value) <> ''
+),
+-- Step 2: Required WAFs for roles
+RoleRequiredWAF AS (
+    SELECT
+        DescriptionName AS RoleName,
+        TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE TRIM(value) <> ''
+),
+-- Step 3: Employee + required WAF mapping
+EmployeeRoleRequirements AS (
+    SELECT
+        ce.EmployeeMasterID,
+        ce.EmployeeName,
+        ce.RoleName,
+        rw.WorkActivityFunctionID
+    FROM ContractorEmployees ce
+    LEFT JOIN RoleRequiredWAF rw
+        ON ce.RoleName = rw.RoleName
+),
+-- Step 4: Qualification check
+QualificationCheck AS (
+    SELECT
+        err.EmployeeMasterID,
+        err.EmployeeName,
+        err.RoleName,
+        err.WorkActivityFunctionID,
+        CASE
+            WHEN q.WorkActivityFunctionID IS NOT NULL
+                 AND q.Qualified = 'Yes'
+            THEN 1
+            ELSE 0
+        END AS QualifiedFlag
+    FROM EmployeeRoleRequirements err
+    LEFT JOIN vm_cedemo_ContractorEmployeesWAFQualifications q
+        ON err.EmployeeMasterID = q.EmployeeMasterID
+        AND err.WorkActivityFunctionID = q.WorkActivityFunctionID
+),
+-- Step 5: Determine role qualification status
+RoleStatus AS (
+    SELECT
+        EmployeeMasterID,
+        EmployeeName,
+        RoleName,
+        COUNT(*) AS RequiredWAFCount,
+        SUM(QualifiedFlag) AS QualifiedWAFCount,
+        CASE
+            WHEN COUNT(*) = SUM(QualifiedFlag)
+            THEN 'Qualified'
+            ELSE 'Not Qualified'
+        END AS RoleQualificationStatus
+    FROM QualificationCheck
+    GROUP BY EmployeeMasterID, EmployeeName, RoleName
+)
+-- Step 6: Employee summary
+SELECT
+    EmployeeMasterID,
+    EmployeeName,
+    COUNT(RoleName) AS TotalRoles,
+    SUM(CASE WHEN RoleQualificationStatus = 'Qualified' THEN 1 ELSE 0 END)
+        AS QualifiedRoleCount,
+    SUM(CASE WHEN RoleQualificationStatus = 'Not Qualified' THEN 1 ELSE 0 END)
+        AS NotQualifiedRoleCount,
+    STRING_AGG(CASE WHEN RoleQualificationStatus = 'Qualified' THEN RoleName END, '; ')
+        AS QualifiedRoles,
+    STRING_AGG(CASE WHEN RoleQualificationStatus = 'Not Qualified' THEN RoleName END, '; ')
+        AS NotQualifiedRoles
+FROM RoleStatus
+GROUP BY EmployeeMasterID, EmployeeName
+ORDER BY EmployeeName;
+
+User : how many contractor employees are qualified for contractor CAC
+SQL:
+-- Step 1: Get contractor employees with roles
+WITH ContractorEmployees AS (
+    SELECT DISTINCT
+        EmployeeMasterID,
+        EmployeeName
+    FROM vm_cedemo_contractoremployees_active
+    CROSS APPLY STRING_SPLIT(ITSRoleNames, ';')
+    WHERE IsActive = 1
+      AND (ContractorName LIKE '%CAC%' OR ContractorDisplayName LIKE '%CAC%')
+      AND TRIM(ISNULL(ITSRoleNames,'')) <> ''
+      AND TRIM(value) <> ''
+),
+-- Step 2: Required WAFs for roles
+RoleRequiredWAF AS (
+    SELECT
+        DescriptionName AS RoleName,
+        TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE TRIM(value) <> ''
+),
+-- Step 3: Map employees to required WAFIDs
+EmployeeRoleRequirements AS (
+    SELECT
+        ce.EmployeeMasterID,
+        ce.EmployeeName,
+        TRIM(value) AS RoleName,
+        rw.WorkActivityFunctionID
+    FROM vm_cedemo_contractoremployees_active ce
+    CROSS APPLY STRING_SPLIT(ce.ITSRoleNames, ';')
+    LEFT JOIN RoleRequiredWAF rw
+        ON TRIM(value) = rw.RoleName
+    WHERE IsActive = 1
+      AND (ContractorName LIKE '%CAC%' OR ContractorDisplayName LIKE '%CAC%')
+      AND TRIM(ISNULL(ITSRoleNames,'')) <> ''
+      AND TRIM(value) <> ''
+),
+-- Step 4: Check qualification
+QualificationCheck AS (
+    SELECT
+        err.EmployeeMasterID,
+        err.EmployeeName,
+        err.RoleName,
+        CASE
+            WHEN q.WorkActivityFunctionID IS NOT NULL
+                 AND q.Qualified = 'Yes'
+            THEN 1
+            ELSE 0
+        END AS QualifiedFlag
+    FROM EmployeeRoleRequirements err
+    LEFT JOIN vm_cedemo_ContractorEmployeesWAFQualifications q
+        ON err.EmployeeMasterID = q.EmployeeMasterID
+        AND err.WorkActivityFunctionID = q.WorkActivityFunctionID
+),
+-- Step 5: Determine role qualification
+RoleStatus AS (
+    SELECT
+        EmployeeMasterID,
+        EmployeeName,
+        CASE
+            WHEN COUNT(*) = SUM(QualifiedFlag)
+            THEN 'Qualified'
+            ELSE 'Not Qualified'
+        END AS EmployeeQualificationStatus
+    FROM QualificationCheck
+    GROUP BY EmployeeMasterID, EmployeeName
+)
+-- Step 6: Final counts
+SELECT
+    COUNT(*) AS TotalContractorEmployeesWithRoles,
+    SUM(CASE WHEN EmployeeQualificationStatus = 'Qualified' THEN 1 ELSE 0 END) AS QualifiedContractorEmployees,
+    SUM(CASE WHEN EmployeeQualificationStatus = 'Not Qualified' THEN 1 ELSE 0 END) AS NotQualifiedContractorEmployees
+FROM RoleStatus;
+
+User : can I know why Contractor Employee Brandon Christopher Flora is flagged ?
+SQL:
+SELECT
+    TaskCode AS [Task Num],
+    TaskDescription,
+    QualificationStatus
+FROM vm_cedemo_contractoremployeestaskqualifications
+WHERE EmployeeMasterID = (
+        SELECT EmployeeMasterID
+        FROM vm_cedemo_contractoremployees_active
+        WHERE EmployeeName = 'Brandon Christopher Flora'
+    );
+-- count query by QualificationStatus 
+SELECT
+    COUNT(*) AS TotalTasksAssigned,
+    SUM(CASE WHEN QualificationStatus = 'Qualified' THEN 1 ELSE 0 END) AS QualifiedTasks,
+    SUM(CASE WHEN QualificationStatus = 'Not Qualified' THEN 1 ELSE 0 END) AS NotQualifiedTasks,
+    SUM(CASE WHEN QualificationStatus = 'Expired' THEN 1 ELSE 0 END) AS ExpiredTasks,
+    SUM(CASE WHEN QualificationStatus = 'Suspended' THEN 1 ELSE 0 END) AS SuspendedTasks
+FROM vm_cedemo_contractoremployeestaskqualifications
+WHERE EmployeeMasterID = (
+        SELECT EmployeeMasterID
+        FROM vm_cedemo_contractoremployees_active
+        WHERE EmployeeName = 'Brandon Christopher Flora'
+);

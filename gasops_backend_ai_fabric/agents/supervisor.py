@@ -81,6 +81,7 @@ async def supervisor(query, database_name=None, auth_token=None, clarification_d
         
         Available agents and their domains:
         1. oqfundamentalagent : Handles any queries related to OQ fundamentals like requirements, employees, qualifications, tasks,roles, etc.
+                                when user asks for qualifications for contractor employees without specifying the contractor name , always asks user to provide contractor name.
         
 
         Rules :
@@ -98,6 +99,12 @@ async def supervisor(query, database_name=None, auth_token=None, clarification_d
         - If name ambiguity (ONLY if no role prefix exists): {{"tool": "nameclarifier"}}
         
         Examples:
+        User : "show me qualified contractor employees" -- here user is asking for contractor employees but has not specified the contractor name, so ask for clarification.
+        Response: {{"answer": "Please specify the contractor name to find qualified contractor employees."}}
+        User : "how many contractor employees are qualified for CAC?" -- here CAC is ambiguous without "contractor" keyword, so route to nameclarifier.
+        Response: {{"tool": "nameclarifier"}}  -- here "CAC" is ambiguous without "contractor" keyword, so route to nameclarifier
+        User : "how many employees are qualified for contractor CAC" -- here user has specified contractor name so no need to ask for clarification, route directly to agent.
+        Response: {{"agent": "oqfundamentalagent"}}
         User: "Show me the details for 34566"
         Response: {{"tool": "numberclarifier"}}  -- 34566 is ambiguous without category prefix
         
@@ -117,6 +124,7 @@ async def supervisor(query, database_name=None, auth_token=None, clarification_d
         Response: {{"tool": "nameclarifier"}}  -- here "dual qualified supervisor" is ambiguous without category prefix, could be role or employeename or fieldactivity, so route
         User : "Is Daniel Lopez with ITSID 372982 qualified to do main cut out?  
         Response: {{"tool": "nameclarifier"}}  -- here "main cut out" is ambiguous without category prefix, so route to nameclarifier even though user is asking a verification question.
+        
         """
     )
 

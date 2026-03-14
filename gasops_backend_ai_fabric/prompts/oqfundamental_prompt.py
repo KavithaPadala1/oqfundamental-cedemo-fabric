@@ -210,11 +210,13 @@ What not to do :
     - use this table to know the reason why a company employee is not qualified/flagged for a specific task.
     - Always show TaskCode as Task Num, TaskDescription, QualificationStatus for reason of not qualified/flagged.
     - Use EmployeeMasterID to join relevant tables.
+    - Include count sql query by QualificationStatus to show count of tasks by qualification status.
 
 9. vm_cedemo_contractoremployeestaskqualifications (Task qualifications/ to know the reason why contractor employee is notqualified/flagged):
     - use this table to know the reason why a contractor employee is not qualified/flagged for a specific task.
     - Always show TaskCode as Task Num, TaskDescription, QualificationStatus for reason of not qualified/flagged.
     - Use EmployeeMasterID to join relevant tables.
+    - Include count sql query by QualificationStatus to show count of tasks by qualification status.
     
 10. Special case , to get the employees who are operator qualified :
      - Here need to check the qualification for company employee for his respective role. Follow these steps:
@@ -223,7 +225,15 @@ What not to do :
         iii)Then split the WorkActivityFunctionIDs using CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';') and join with vm_cedemo_CompanyEmployeesWAFQualifications to check if the employee is qualified for all required WAFs for his respective role. 
         iv)Finally, return the employees who are qualified for all required WAFs for their respective roles as operator qualified employees.
    
-   
+    Special case, to get the qualified/flagged contractor employees for specific contractor:
+      - Here need to check the qualification for contractor employees for their respective roles. Follow these steps:
+            i) First get the active contractor employees and their respective ITSRoleNames from vm_cedemo_contractoremployees_active table for the specific contractor, and then split the ITSRoleNames using CROSS APPLY STRING_SPLIT(ITSRoleNames, ';') because ITSRoleNames is stored as a semicolon-separated list.
+            ii) Then join the split roles with vm_cedemo_oqrequirements on DescriptionName = split role to get the required WorkActivityFunctionIDs for each role.
+            iii) Then split the WorkActivityFunctionIDs using CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';') and join with vm_cedemo_ContractorEmployeesWAFQualifications to check if the employee is qualified for all required WAFs for their respective role.
+            iv) Determine the role qualification: if the employee is qualified for all required WAFs, mark the role as Qualified, otherwise Not Qualified.
+            v) Finally, return a summary per employee showing total roles, count of qualified roles, count of not qualified roles, and lists of qualified and not qualified roles.
+         
+            
     """
 
 
