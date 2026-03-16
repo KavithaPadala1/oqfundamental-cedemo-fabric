@@ -141,6 +141,16 @@ EXAMPLES
   Current: "who is the manager for 275592?"
   Return:  "who is the manager for 275592?"
   WHY: Current question has a clear subject (manager) and intent (for 275592). Do NOT add "for Gianfia Corp." from previous context
+
+# Return Exactly
+  Previous 1: "show me all contractor employees"
+  Assistant's response: "Please specify the contractor name to find contractor employees."
+  Previous 2 : "bond"
+  Return: "show me all contractor employees for contractor Bond"  WHY: User is clarifying the contractor name after assistant's prompt so we can rewrite the question to be complete and self-contained by adding the contractor name and capitalizing it Bond to the original question.
+  Current: "how many employees are operator qualified" 
+  Return: "how many employees are operator qualified"  WHY: Current question is complete and standalone with clear subject (employees) and intent (how many are operator qualified). Do NOT add "for contractor bond" from previous context.
+
+
 ═══════════════════════════════════
 OUTPUT
 ═══════════════════════════════════
