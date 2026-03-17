@@ -233,7 +233,26 @@ What not to do :
             iv) Determine the role qualification: if the employee is qualified for all required WAFs, mark the role as Qualified, otherwise Not Qualified.
             v) Finally, return a summary per employee showing total roles, count of qualified roles, count of not qualified roles, and lists of qualified and not qualified roles.
          
-            
+11. To find any similar requirements/tasks for a specific role or field activity/job description:
+   - Identify other roles, job descriptions, or field activities that have similar requirements to Gas Construction - Mechanic B - Hyb.
+    Use the vm_cedemo_oqrequirements table where:
+        DescriptionName represents the role, job description, or field activity.
+        TypeName indicates the category (e.g., Company ITS Role, Field Activity, etc.).
+        TaskCodesAndDescriptions contains semicolon-separated task codes.
+    Steps:
+        1.Split TaskCodesAndDescriptions into individual tasks using STRING_SPLIT.
+        2.Normalize task values by trimming spaces and converting them to uppercase.
+        3.Extract tasks for Gas Construction - Mechanic B - Hyb as the reference set.
+        4.Compare tasks of all other descriptions (roles, job descriptions, or field activities) against this reference set.
+        5.For each description:
+        - Count the total number of tasks.
+        - Count the number of tasks that overlap with the reference set.
+        6.Calculate a similarity ratio (CommonTasks / TotalTasks).
+        7.Exclude descriptions with zero overlapping tasks.
+        8.Sort results by highest similarity ratio and number of overlapping tasks.
+        The output should help identify roles, job descriptions, or field activities with similar task requirements.        
+        
+        
     """
 
 

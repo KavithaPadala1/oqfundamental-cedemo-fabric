@@ -810,9 +810,43 @@ EmployeeStatus AS (
     FROM QualificationCheck
     GROUP BY EmployeeMasterID, EmployeeName
 )
-
 SELECT
     COUNT(*) AS TotalEmployees,
     SUM(CASE WHEN EmployeeQualificationStatus = 'Qualified' THEN 1 ELSE 0 END) AS TotalQualifiedEmployees,
     SUM(CASE WHEN EmployeeQualificationStatus = 'Not Qualified' THEN 1 ELSE 0 END) AS TotalNotQualifiedEmployees
 FROM EmployeeStatus;
+
+User : Are there any other roles similar to ITS Role Gas Construction - Mechanic B - Hyb in terms of requirements
+SQL:
+-- Comparison of tasks for Gas Construction - Mechanic B - Hyb vs other roles
+WITH RoleTasks AS (
+    SELECT DISTINCT
+        DescriptionName AS RoleName,
+        UPPER(LTRIM(RTRIM(value))) AS Task  -- normalize spaces and case
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(TaskCodesAndDescriptions, ';')
+    WHERE TypeName = 'Company ITS Role'
+      AND LTRIM(RTRIM(value)) <> ''
+),
+MechanicBTasks AS (
+    SELECT Task
+    FROM RoleTasks
+    WHERE RoleName = 'Gas Construction - Mechanic B - Hyb'
+),
+TaskOverlap AS (
+    SELECT
+        rt.RoleName,
+        COUNT(DISTINCT rt.Task) AS TotalTasks,
+        COUNT(DISTINCT CASE WHEN mb.Task IS NOT NULL THEN rt.Task END) AS CommonTasks
+    FROM RoleTasks rt
+    LEFT JOIN MechanicBTasks mb ON rt.Task = mb.Task
+    WHERE rt.RoleName <> 'Gas Construction - Mechanic B - Hyb'
+    GROUP BY rt.RoleName
+)
+SELECT RoleName,
+       TotalTasks,
+       CommonTasks,
+       CAST(CommonTasks AS FLOAT) / TotalTasks AS CommonTasksRatio
+FROM TaskOverlap
+WHERE CommonTasks > 0
+ORDER BY CommonTasksRatio DESC, CommonTasks DESC, RoleName ASC;

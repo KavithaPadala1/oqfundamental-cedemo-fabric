@@ -113,6 +113,16 @@ EXAMPLES
   Current: "CAC" --> here user is clarifying the contractor name after assistant's prompt so we can rewrite the question to be complete and self-contained by adding the contractor name to the original question.
   Return : "show me contractor employees for contractor CAC" --> add contractor keyword and name to make it complete.
   
+  Previous : Show me requirements for the gas oper dual Qualified Supervisor
+  Assistant: Looks like there are a few matches for **gas oper dual Qualified Supervisor** 😊  
+              Could you let me know which one you mean?  
+              1. **Gas Quality Control - Dual Qualified - Hyb** — ITS Role  
+              2. **Gas Operations - Dual Qualified Supervisor - Hyb** — ITS Role  
+              3. **Gas Quality Control - Dual Qualified Academy - Hyb** — ITS Role
+ Current: 2
+  Return:  "Show me requirements for ITS Role Gas Operations - Dual Qualified Supervisor - Hyb"
+  Why : User is selecting from a numbered list the assistant just showed, so we rewrite the question to include the specific selection and make it complete and self-contained. We also add "ITS Role" to clarify the subject based on the assistant's previous message.
+  
 # Rewrite — user selects from a list (Rule A):
   Assistant showed: "1. James Hall  2. James Clark  3. James Burke"
   Current: "James Clark"
@@ -125,11 +135,15 @@ EXAMPLES
   Return:  "Show me details of Contractor CWI Sky Testing where CWI Wayne Griffiths has worked"
   WHY: User confirming, not asking standalone question.
 
-# Rewrite — implicit continuation with NO subject (Rule D):
-  Previous: User asked about work order 100500514, assistant responded.
-  Current:  "show me the list of assigned engineers"
-  Return:   "show me the list of assigned engineers for work order 100500514"
-  WHY: No subject given (assigned to what?). User clearly means the same work order.
+# Rewrite :
+Previous : compare req of live mans and services with gas constrution mech b
+Assistant: Got it! 😊  For **gas constrution mech b**, you mean **Gas Construction - Mechanic B - Hyb** — ITS Role, right?  
+            For **live mans and services**, could you please choose one of these?  
+            1. **Live Mains and Services** — Field Activity  
+            2. **Live Mains and Services + Large Dia Tap** — Field Activity 🚀
+Current: yes Gas Construction - Mechanic B - Hyb B and Live Mains and Services
+Return : compare requirements of Field Activity Live Mains and Services with ITS Role Gas Construction - Mechanic B - Hyb
+why: User confirming both selections, not asking a new standalone question.
 
 # Return EXACTLY — question has referent even if vague:
   Previous : "who is the employee with 372982 ?"
