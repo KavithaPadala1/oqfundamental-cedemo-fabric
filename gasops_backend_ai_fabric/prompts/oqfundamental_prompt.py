@@ -89,6 +89,7 @@ What not to do :
 - No subqueries in aggregates
 - No INTERSECT in count queries
 - No nested SELECT inside CASE within SUM
+- If user asks like this "show me requirements for FieldActivityDescription Field Activity x"  here in the SQL do not apply filter as DescriptionName = 'Field Activity x' instead apply filter as DescriptionName = 'x' because user is just mentioning the column name in the question but in the data the column has only the value without column name. Always understand the user question properly before applying filters in SQL.
 
 # ABBREVIATIONS AND MEANINGS :
 - Requirements : refers to Task code and Task descriptions.
@@ -181,7 +182,7 @@ What not to do :
 
 6. vm_cedemo_CompanyEmployeesWAFQualifications (Qualifications for Company Employees) :
     - use this table to know the company employee qualified or not.
-    - For flagged or not qualified company employees, always inlcude MissingCoveredTasks.
+    - For flagged or not qualified company employees, always inlcude MissingCoveredTasks.An employee is considered flagged / not qualified if they are NOT qualified for even one of the required WorkActivityFunctionIDs.
     - Follow below 7 steps to get the qualified company employees for specific DescriptionName:
         1. Get required `WorkActivityFunctionIDs` from `vm_cedemo_oqrequirements` for the given `DescriptionName`.
         2. Split the semicolon-separated IDs using `CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')` because `WorkActivityFunctionIDs` is stored as a varchar list.
@@ -190,10 +191,22 @@ What not to do :
         5. Join the split IDs with `vm_cedemo_CompanyEmployeesWAFQualifications` and filter where `Qualified = 'Yes'`.
         6. For each employee, count how many required `WorkActivityFunctionIDs` they are qualified for and keep only employees where this count equals the total required IDs (meaning the employee is qualified for **all required IDs**, not just any one).
         7. Join with `vm_cedemo_companyemployees_active` to return active employee details such as `EmployeeName`, `ITSID`, and `ITSRoleNames`.
-       
+    
+    - Steps to get Flagged / Not Qualified Employees:
+        1. Get required WorkActivityFunctionIDs from vm_cedemo_oqrequirements for the given DescriptionName.
+        2. Split the semicolon-separated IDs using CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';') because WorkActivityFunctionIDs is stored as a varchar list.
+        3. Use TRY_CAST(value AS BIGINT) when joining because WorkActivityFunctionIDs is varchar but WorkActivityFunctionID in the qualifications table is BIGINT, to avoid conversion errors.
+        4. Join the split IDs with `vm_cedemo_CompanyEmployeesWAFQualifications`.
+        5. Filter records where UPPER(TRIM(Qualified)) <> 'YES' to identify not qualified WAFs.
+        6. Group by EmployeeMasterID and:
+            Count distinct WorkActivityFunctionID as missing count
+            Aggregate MissingCoveredTasks using STRING_AGG
+        7. Return all employees who have at least one missing required WorkActivityFunctionID (even one missing = flagged).
+        8. Join with `vm_cedemo_companyemployees_active` to return EmployeeName, ITSID, and ITSRoleNames.
+    
 7. vm_cedemo_ContractorEmployeesWAFQualifications (Qualifications for Contractor Employees) :
     - use this table to know the contractor employee qualified or not.
-    - For flagged or not qualified contractor employees, always inlcude MissingCoveredTasks.
+    - For flagged or not qualified contractor employees, always inlcude MissingCoveredTasks.An employee is considered flagged / not qualified if they are NOT qualified for even one of the required WorkActivityFunctionIDs.
     - Follow these 7 steps to get the qualified contractor employees for specific DescriptionName:
         1. Get required `WorkActivityFunctionIDs` from `vm_cedemo_oqrequirements` for the given `DescriptionName`.
         2. Split the semicolon-separated IDs using `CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')` because `WorkActivityFunctionIDs` is stored as a varchar list.
@@ -252,7 +265,22 @@ What not to do :
         8.Sort results by highest similarity ratio and number of overlapping tasks.
         The output should help identify roles, job descriptions, or field activities with similar task requirements.        
         
-        
+12. To get the work descriptions mapped to a Field Activity:
+    When the user asks to "show work descriptions mapped to a Field Activity" or similar:
+        Steps:
+        1. Filter only active records (IsActive = 1).
+        2. Filter based on the given FieldActivityDescription.
+        3. Group results by RouteSheetType.
+        4. Return:
+            - RouteSheetType
+            - Aggregated list of work descriptions using STRING_AGG(AliasName, ', ')
+            - Count of work descriptions per RouteSheetType
+        5. Sort results by count in descending order.
+        6. Use clear column aliases: WorkDescriptions , WorkDescriptionCount
+    
+    - To get the work/job description for a specific RouteSheetType:
+        Retrieve all AliasName values as WorkDescriptions where IsActive = 1 and RouteSheetType = <RouteSheetType>, and include the total count of these records.
+        RouteSheetType can be like 'Gas Operations Route Sheet' , 'Contractor Route Sheet', etc.
     """
 
 

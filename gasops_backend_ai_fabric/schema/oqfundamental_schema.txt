@@ -121,6 +121,13 @@ Columns:
 - TaskDesc (varchar) : Description of the task.
 - IsActive (bit) : Indicates if the task is currently active.
 
+TABLE : cedemo_FieldActivityAliasesMaster
+Description :
+Columns:
+- FieldActivityDescription (varchar) : field activity description
+- AliasName (varchar) : alias name of FieldActivityDescription or it can be a work description or job description
+- RouteSheetType (varchar) : RouteSheetType
+- IsActive (bit) : ALways consider IsActive=1  
 
 RELATIONSHIPS:
 - vm_cedemo_oqrequirements.WorkActivityFunctionIDs = vm_cedemo_CompanyEmployeesWAFQualifications.WorkActivityFunctionID

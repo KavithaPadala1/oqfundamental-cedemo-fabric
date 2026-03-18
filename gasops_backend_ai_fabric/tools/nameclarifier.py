@@ -311,6 +311,15 @@ CATEGORY_CONFIG = {
         "return_column": "CompanyITSRoleName",
         "type": "role"
     }
+    ,
+    # Work Activity Function (vm_cedemo_oqrequirements)
+    "WorkActivityFunctionDescription": {
+        "table": "vm_cedemo_oqrequirements",
+        "search_column": "DescriptionName",
+        "return_column": "DescriptionName",
+        "type": "work_activity_function",
+        "extra_filter": "TypeName = 'Work Activity Function'"
+    }
 }
 
 
@@ -472,7 +481,6 @@ def generate_name_search_query(name: str, categories: list) -> str:
         table_name = config["table"]
         search_column = config["search_column"]
         return_column = config["return_column"]
-        
         # Tables that require IsActive = 1 filter
         tables_with_isactive = [
             "cedemo_CompanyITSRoleMaster",
@@ -481,15 +489,18 @@ def generate_name_search_query(name: str, categories: list) -> str:
             "cedemo_CoveredTask",
             "cedemo_ContractorMaster"
         ]
-        
+
         # Add IsActive filter if applicable
         isactive_filter = " AND IsActive = 1" if table_name in tables_with_isactive else ""
-        
+
         # Add exclusion filter for O&R Contractor roles
         exclusion_filter = ""
         if category == "ContractorITSRoleAlias":
             exclusion_filter = " AND ContractorITSRoleName NOT LIKE 'O&R Contractor%'"
-        
+
+        # Add extra filter for Work Activity Function
+        extra_filter = f" AND {config['extra_filter']}" if 'extra_filter' in config else ""
+
         # Build query part with phrase-level fuzzy matching (no word splitting)
         query_part = f"""
         SELECT DISTINCT
@@ -525,7 +536,7 @@ def generate_name_search_query(name: str, categories: list) -> str:
             END as similarity
         FROM {table_name}
         WHERE {search_column} IS NOT NULL
-          AND LTRIM(RTRIM({search_column})) != ''{isactive_filter}{exclusion_filter}
+          AND LTRIM(RTRIM({search_column})) != ''{isactive_filter}{exclusion_filter}{extra_filter}
           AND (
               -- Primary filter: direct string matching (whole phrase only)
               LOWER({search_column}) LIKE LOWER('%{sanitized_name}%')
@@ -570,11 +581,13 @@ async def handle_all_single_matches(original_query: str, clarifications: list):
     for item in clarifications:
         match = item["matches"][0]
         category_key = match["category"]
-        config = CATEGORY_CONFIG.get(category_key, {})
-        return_column = config.get("return_column", category_key)
-        # Use format_category_name for clarity
+        # Use only the friendly label, not the raw category key
         category_label = format_category_name(category_key)
-        clarified_value = f"{category_label} {match['name']}"
+        # Avoid repeating the label if it's already in the name (case-insensitive)
+        if category_label.lower() in match['name'].lower():
+            clarified_value = match['name']
+        else:
+            clarified_value = f"{category_label} {match['name']}"
         # Check if we've already added this clarified value
         if clarified_value in seen_clarified:
             seen_clarified[clarified_value]["original_names"].append(item["original_name"])
@@ -597,28 +610,28 @@ async def handle_all_single_matches(original_query: str, clarifications: list):
     ])
     
     rewrite_prompt = f"""
-    Rewrite this query by replacing ALL ambiguous names with their clarified versions.
-    
-    Original Query: {original_query}
-    
-    Replacements to make:
-    {replacements_text}
-    
-    Examples:
-    - Original: "show me projects by Joseph at Shaw Pipeline"
-      Replacements: Joseph → ProjectSupervisor1Name Joseph Clark (person), Shaw Pipeline → WeldingContractorName Shaw Pipeline Services (company)
-      Rewritten: "show me projects by ProjectSupervisor1Name Joseph Clark at WeldingContractorName Shaw Pipeline Services"
-    
-    - Original: "show me requ for 16incg electr"
-      Replacements: 16incg electr → FieldActivityDescription 16inch Electrofusion (activity)
-      Rewritten: "show me requ for FieldActivityDescription 16inch Electrofusion"
-    
-    - Original: "show me req for excavate and backfill"
-      Replacements: 'excavate', 'backfill' → FieldActivityDescription Excavation and Backfill (activity)
-      Rewritten: "show me req for FieldActivityDescription Excavation and Backfill"
-    
-    Return ONLY the rewritten query, nothing else.
-    """
+        Rewrite this query by replacing ALL ambiguous names with their clarified versions.
+
+        Original Query: {original_query}
+
+        Replacements to make:
+        {replacements_text}
+
+        Examples:
+        - Original: "show me projects by Joseph at Shaw Pipeline"
+            Replacements: Joseph → Project Supervisor Joseph Clark (person), Shaw Pipeline → Welding Contractor Shaw Pipeline Services (company)
+            Rewritten: "show me projects by Project Supervisor Joseph Clark at Welding Contractor Shaw Pipeline Services"
+
+        - Original: "show me requ for 16incg electr"
+            Replacements: 16incg electr → Field Activity 16inch Electrofusion (activity)
+            Rewritten: "show me requ for Field Activity 16inch Electrofusion"
+
+        - Original: "show me req for excavate and backfill"
+            Replacements: 'excavate', 'backfill' → Field Activity Excavation and Backfill (activity)
+            Rewritten: "show me req for Field Activity Excavation and Backfill"
+
+        Return ONLY the rewritten query, nothing else.
+        """
     
     try:
         response = azure_client.chat.completions.create(
@@ -1000,7 +1013,8 @@ def format_category_name(category: str) -> str:
             "section": "Section",
             "region": "Region",
             "activity": "Field Activity",
-            "role": "ITS Role"
+            "role": "ITS Role",
+            "work_activity_function": "Work Activity Function"
         }
         
         # Special handling for specific categories
@@ -1016,6 +1030,8 @@ def format_category_name(category: str) -> str:
             return "Task Number"
         elif category == "TaskDesc":
             return "Task Description"
+        elif category == "WorkActivityFunctionDescription":
+            return "Work Activity Function"
         
         return type_labels.get(entity_type, entity_type.title())
     

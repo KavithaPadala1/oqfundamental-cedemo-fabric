@@ -850,3 +850,153 @@ SELECT RoleName,
 FROM TaskOverlap
 WHERE CommonTasks > 0
 ORDER BY CommonTasksRatio DESC, CommonTasks DESC, RoleName ASC;
+
+User : pls show me all the work descriptions in the route sheets that are mapped to FieldActivityDescription Live Mains and Services 
+SQL:
+SELECT 
+    RouteSheetType,
+    STRING_AGG(AliasName, ', ') AS WorkDescriptions,
+    COUNT(*) AS WorkDescriptionCount
+FROM cedemo_FieldActivityAliasesMaster
+WHERE IsActive = 1
+  AND FieldActivityDescription = 'Live Mains and Services'
+GROUP BY RouteSheetType
+ORDER BY WorkDescriptionCount DESC;
+
+User: Can you show me the work descriptions for gas operations route sheets
+SQL:
+select AliasName as WorkDescriptions 
+ from cedemo_FieldActivityAliasesMaster where IsActive = 1
+  AND RouteSheetType = 'Gas Operations Route Sheet';
+SELECT 
+    COUNT(AliasName) AS TotalWorkDescriptionCount
+FROM cedemo_FieldActivityAliasesMaster
+WHERE IsActive = 1
+  AND RouteSheetType = 'Gas Operations Route Sheet';
+
+User : get all flagged CAC employees for live mains and Services
+User : Are there any CAC employees not qualified for live mains and Services
+SQL:
+-- Step 1 : get all CAC contractor employees
+WITH ContractorEmployees AS (
+    SELECT DISTINCT
+        EmployeeMasterID,
+        EmployeeName
+    FROM vm_cedemo_contractoremployees_active
+    WHERE IsActive = 1
+      AND (ContractorName LIKE '%CAC%' 
+           OR ContractorDisplayName LIKE '%CAC%')
+),
+-- step 2 :get all required WorkActivityFunctionIDs for Live Mains and Services
+RequiredWAF AS (
+    SELECT DISTINCT
+        TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE DescriptionName = 'Live Mains and Services'
+      AND TRIM(value) <> ''
+),
+EmployeeRequirements AS (
+    SELECT
+        ce.EmployeeMasterID,
+        ce.EmployeeName,
+        rw.WorkActivityFunctionID
+    FROM ContractorEmployees ce
+    CROSS JOIN RequiredWAF rw
+),
+-- step3: check for qualification
+QualificationCheck AS (
+    SELECT
+        er.EmployeeMasterID,
+        er.EmployeeName,
+        er.WorkActivityFunctionID,
+        CASE
+            WHEN q.WorkActivityFunctionID IS NOT NULL
+                 AND q.Qualified = 'Yes'
+            THEN 1
+            ELSE 0
+        END AS QualifiedFlag
+    FROM EmployeeRequirements er
+    LEFT JOIN vm_cedemo_ContractorEmployeesWAFQualifications q
+        ON er.EmployeeMasterID = q.EmployeeMasterID
+        AND er.WorkActivityFunctionID = q.WorkActivityFunctionID
+),
+EmployeeStatus AS (
+    SELECT
+        EmployeeMasterID,
+        EmployeeName,
+        COUNT(*) AS TotalRequiredWAFs,
+        SUM(QualifiedFlag) AS QualifiedWAFs,
+        CASE
+            WHEN COUNT(*) = SUM(QualifiedFlag)
+            THEN 'Qualified'
+            ELSE 'Not Qualified'
+        END AS EmployeeQualificationStatus
+    FROM QualificationCheck
+    GROUP BY EmployeeMasterID, EmployeeName
+)
+-- Employee details
+SELECT *
+FROM EmployeeStatus
+ORDER BY EmployeeName;
+-- Summary counts
+WITH ContractorEmployees AS (
+    SELECT DISTINCT
+        EmployeeMasterID,
+        EmployeeName
+    FROM vm_cedemo_contractoremployees_active
+    WHERE IsActive = 1
+      AND (ContractorName LIKE '%CAC%' 
+           OR ContractorDisplayName LIKE '%CAC%')
+),
+RequiredWAF AS (
+    SELECT DISTINCT
+        TRY_CAST(TRIM(value) AS BIGINT) AS WorkActivityFunctionID
+    FROM vm_cedemo_oqrequirements
+    CROSS APPLY STRING_SPLIT(WorkActivityFunctionIDs, ';')
+    WHERE DescriptionName = 'Live Mains and Services'
+      AND TRIM(value) <> ''
+),
+EmployeeRequirements AS (
+    SELECT
+        ce.EmployeeMasterID,
+        ce.EmployeeName,
+        rw.WorkActivityFunctionID
+    FROM ContractorEmployees ce
+    CROSS JOIN RequiredWAF rw
+),
+QualificationCheck AS (
+    SELECT
+        er.EmployeeMasterID,
+        er.EmployeeName,
+        er.WorkActivityFunctionID,
+        CASE
+            WHEN q.WorkActivityFunctionID IS NOT NULL
+                 AND q.Qualified = 'Yes'
+            THEN 1
+            ELSE 0
+        END AS QualifiedFlag
+    FROM EmployeeRequirements er
+    LEFT JOIN vm_cedemo_ContractorEmployeesWAFQualifications q
+        ON er.EmployeeMasterID = q.EmployeeMasterID
+        AND er.WorkActivityFunctionID = q.WorkActivityFunctionID
+),
+EmployeeStatus AS (
+    SELECT
+        EmployeeMasterID,
+        EmployeeName,
+        COUNT(*) AS TotalRequiredWAFs,
+        SUM(QualifiedFlag) AS QualifiedWAFs,
+        CASE
+            WHEN COUNT(*) = SUM(QualifiedFlag)
+            THEN 'Qualified'
+            ELSE 'Not Qualified'
+        END AS EmployeeQualificationStatus
+    FROM QualificationCheck
+    GROUP BY EmployeeMasterID, EmployeeName
+)
+SELECT
+    COUNT(*) AS TotalEmployees,
+    SUM(CASE WHEN EmployeeQualificationStatus = 'Qualified' THEN 1 ELSE 0 END) AS TotalQualifiedEmployees,
+    SUM(CASE WHEN EmployeeQualificationStatus = 'Not Qualified' THEN 1 ELSE 0 END) AS TotalNotQualifiedEmployees
+FROM EmployeeStatus;

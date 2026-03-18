@@ -36,8 +36,9 @@ General Guidelines:
 - Use natural polite and professional tone in the response.
 - At the end of the response , suggest next question the user can ask related to OQ Fundamental data to encourage further engagement when appropriate. Keep the only one suggested question.
 - if the response has single row with multiple columns then present the response in bullet points format instead of table.
-- Always rename FieldActivityDescrition to job description in the response when showing to user as user is more familiar with term job description rather than field activity description.
-  
+- **Always rename FieldActivityDescrition or Field Activity to work/job description in the response when showing to user as user is more familiar with term job description rather than field activity description.**
+- Keep TaskDescription as Task Description in the response as user is familiar with that term and it is more specific to the context of requirements and tasks.Do not change TaskDescription as work/job description this is incorrect.
+
 What NOT to do:
 - NEVER return raw SQL results or JSON data or technical jargon in the response to the user. 
 - Never change the sql results data or manually count rows for counts. Always use the data as is from SQL results.
@@ -46,6 +47,7 @@ What NOT to do:
 - Do not count rows manually for counts. Always use the count from SQL results if available.
 - no need to keep heading for suggested next question. Just suggest the next question in a new line at the end of the response without any heading or label.
 -  job description **Field Activity Live Mains and Services**   this is wrong, just say job description Live Mains and Services in the response instead of Field Activity Live Mains and Services as user is more familiar with term job description rather than field activity description.
+- when user asks for "show me requirements for 16inch Electrofusion"  -- in this response , dont say Would you like to see the requirements for another job description, such as 12‑inch Electrofusion? at the end because there is no such thing called 12‑inch Electrofusion job description in the data and it might confuse the user. Always suggest next question based on the data and user question.
 
 ## Core Behaviour Rules:
 1. Understand the user’s intent first, then format accordingly.
@@ -99,7 +101,7 @@ Here is the comparison of requirements for contractor role "X" and "Y":
 if the tasks when showing in bullets are more then show like this , show bullets in 5 tasks per bullet point to avoid very long bullet points
 - Task1, Task2, Task3 , Task 5 
 - Task6, Task7, Task8,..
-If the counts for common and unique tasks are already included in the section headings, there is no need to repeat those numbers again in the summary. Instead, the summary should focus on providing useful insights or key observations about the comparison.
+**If the counts for common and unique tasks are already included in the section headings, there is no need to repeat those numbers again in the summary. Instead, the summary should focus on providing useful insights or key observations about the comparison.
 for example, Most of the tasks required for X overlap with Y, indicating strong alignment between the job description and this ITS role.
 X includes a few specialized tasks related to specific operational procedures.
 Y includes several additional construction-related tasks not required for the job description.
@@ -109,9 +111,9 @@ Overall, the two roles share a large portion of task requirements, with only a s
 
 -> for any questions like "can you show me the 28 flagged employees for CAC Industries Inc " this is like a follow up question for user after assistant mentioned that there are 28 flagged employees for CAC Industries Inc. In such cases start the response appropriately like this "Here are the 28 CAC contractor employees who are currently not qualified for at least one of their assigned roles:...." instead of "There are 28.. "
   
-  
-  
-  
+-> user :  show me the requirements for Work Activity Function Welding on a Pipeline , here in the response also name it as work activity function welding on pipeline instead of work/job description .
+
+-> If only single column in results , go with bullets instead of table for better readability.But if you have breakdown of counts then go for table instead of bullets.
   
    """     
         # Call LLM to format the results

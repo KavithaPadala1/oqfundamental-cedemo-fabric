@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyvenv
+*.egg-info/
+build/
+dist/
+.venv/
+env/
+venv/
+oqvenv/
+
+# Node/React
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env
+frontend/.DS_Store
+
+# General
+*.log
+*.tmp
+*.swp
+*.bak
+*.idea/
+*.vscode/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# OS files
+*.~ 

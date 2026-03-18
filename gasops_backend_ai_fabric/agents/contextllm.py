@@ -164,6 +164,13 @@ why: User confirming both selections, not asking a new standalone question.
   Current: "how many employees are operator qualified" 
   Return: "how many employees are operator qualified"  WHY: Current question is complete and standalone with clear subject (employees) and intent (how many are operator qualified). Do NOT add "for contractor bond" from previous context.
 
+  Previous : "Can you show me the work desc for gas operations route sheets"
+  Assistant : "CWO + GLO, Cut and Cap + GLO, CV Swap + GLO, Dead or Alive + GLO, Demo + GLO
+                Enroachment + GLO, MV + GLO, NCR + GLO, New Meter + GLO, Service + GLO
+                Surveil + GLO, Tapping + GLO, Keyhole Repair + GLO, Main Valve Fault
+                Would you like to see the requirements for each of these gas operations job descriptions?"
+  Current : "show me req for 16inch?"
+  Return : "show me requirements for 16inch"  WHY: User is asking a new standalone question with clear subject (16inch) and intent (show requirements). Do NOT add "for gas operations route sheets" from previous context.
 
 ═══════════════════════════════════
 OUTPUT
